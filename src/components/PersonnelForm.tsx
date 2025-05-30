@@ -33,6 +33,7 @@ const PersonnelForm: React.FC<PersonnelFormProps> = ({ onSubmit, onCancel }) => 
       ...formData,
       issueDate: now.toISOString().split('T')[0],
       expiryDate: expiryDate.toISOString().split('T')[0],
+      status: 'active',
     };
 
     onSubmit(personnel);

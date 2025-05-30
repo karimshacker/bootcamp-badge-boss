@@ -20,7 +20,7 @@ const PersonnelFiltersComponent: React.FC<PersonnelFiltersProps> = ({
   const updateFilter = (key: keyof PersonnelFilters, value: string) => {
     onFiltersChange({
       ...filters,
-      [key]: value || undefined
+      [key]: value === 'all' ? undefined : value
     });
   };
 
@@ -61,48 +61,48 @@ const PersonnelFiltersComponent: React.FC<PersonnelFiltersProps> = ({
           />
         </div>
 
-        <Select value={filters.role || ''} onValueChange={(value) => updateFilter('role', value)}>
+        <Select value={filters.role || 'all'} onValueChange={(value) => updateFilter('role', value)}>
           <SelectTrigger>
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Roles</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="organizer">Organizer</SelectItem>
             <SelectItem value="trainer">Trainer</SelectItem>
             <SelectItem value="director">Director</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={filters.department || ''} onValueChange={(value) => updateFilter('department', value)}>
+        <Select value={filters.department || 'all'} onValueChange={(value) => updateFilter('department', value)}>
           <SelectTrigger>
             <SelectValue placeholder="All Departments" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Departments</SelectItem>
+            <SelectItem value="all">All Departments</SelectItem>
             {departments.map(dept => (
               <SelectItem key={dept} value={dept}>{dept}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={filters.accessLevel || ''} onValueChange={(value) => updateFilter('accessLevel', value)}>
+        <Select value={filters.accessLevel || 'all'} onValueChange={(value) => updateFilter('accessLevel', value)}>
           <SelectTrigger>
             <SelectValue placeholder="All Access Levels" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Access Levels</SelectItem>
+            <SelectItem value="all">All Access Levels</SelectItem>
             <SelectItem value="basic">Basic</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="full">Full</SelectItem>
           </SelectContent>
         </Select>
 
-        <Select value={filters.status || ''} onValueChange={(value) => updateFilter('status', value)}>
+        <Select value={filters.status || 'all'} onValueChange={(value) => updateFilter('status', value)}>
           <SelectTrigger>
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
             <SelectItem value="suspended">Suspended</SelectItem>
