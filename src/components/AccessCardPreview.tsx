@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Shield } from 'lucide-react';
@@ -42,8 +41,8 @@ const AccessCardPreview: React.FC<AccessCardPreviewProps> = ({ person }) => {
       {/* Access Card */}
       <div 
         ref={cardRef}
-        className="w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border"
-        style={{ aspectRatio: '1.586/1' }} // Credit card ratio
+        className="w-96 mx-auto bg-white rounded-xl shadow-2xl overflow-hidden border"
+        style={{ aspectRatio: '1.586/1' }}
       >
         {/* Header */}
         <div className={`bg-gradient-to-r ${getRoleColor(person.role)} px-6 py-4 text-white`}>

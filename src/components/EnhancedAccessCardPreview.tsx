@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Shield, QrCode, Lock, CheckCircle } from 'lucide-react';
@@ -60,7 +59,7 @@ const EnhancedAccessCardPreview: React.FC<EnhancedAccessCardPreviewProps> = ({ p
       {/* Enhanced Access Card */}
       <div 
         ref={cardRef}
-        className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-gray-100"
+        className="w-96 mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden border-2 border-gray-100"
         style={{ aspectRatio: '1.586/1' }}
       >
         {/* Enhanced Header with Gradient and Pattern */}
@@ -169,8 +168,7 @@ const EnhancedAccessCardPreview: React.FC<EnhancedAccessCardPreviewProps> = ({ p
       <div className="flex justify-center space-x-3">
         <Button 
           onClick={handleDownloadPDF}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          size="lg"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 px-8 py-3"
         >
           <Download className="w-5 h-5 mr-2" />
           Download High-Quality PDF

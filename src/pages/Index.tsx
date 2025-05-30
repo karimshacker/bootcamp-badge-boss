@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Users, Download, Shield, BarChart3, Loader2 } from 'lucide-react';
+import { Plus, Users, Download, Shield, BarChart3, Loader2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +11,10 @@ import ProfessionalAccessCard from '@/components/ProfessionalAccessCard';
 import Dashboard from '@/components/Dashboard';
 import PersonnelFiltersComponent from '@/components/PersonnelFilters';
 import { personnelService } from '@/services/personnelService';
+import { accessLogsService } from '@/services/accessLogsService';
+import { departmentsService } from '@/services/departmentsService';
+import { AccessLog } from '@/types/accessLogs';
+import { Department } from '@/types/departments';
 
 const Index = () => {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
@@ -22,12 +25,18 @@ const Index = () => {
   const [filters, setFilters] = useState<PersonnelFilters>({});
   const [activeTab, setActiveTab] = useState('personnel');
   const [departments, setDepartments] = useState<string[]>([]);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [departmentsList, setDepartmentsList] = useState<Department[]>([]);
   const { toast } = useToast();
 
   // Load initial data
   useEffect(() => {
     loadPersonnel();
     loadDepartments();
+    loadAccessLogs();
+    loadDepartmentsList();
   }, []);
 
   const loadPersonnel = async () => {
@@ -53,6 +62,28 @@ const Index = () => {
       setDepartments(deps);
     } catch (error) {
       console.error('Failed to load departments:', error);
+    }
+  };
+
+  const loadAccessLogs = async () => {
+    try {
+      setLogsLoading(true);
+      setLogsError(null);
+      const logs = await accessLogsService.getAllLogs();
+      setAccessLogs(logs);
+    } catch (error) {
+      setLogsError('Failed to load access logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const loadDepartmentsList = async () => {
+    try {
+      const deps = await departmentsService.getAllDepartments();
+      setDepartmentsList(deps);
+    } catch (error) {
+      // Optionally handle error
     }
   };
 
@@ -187,8 +218,7 @@ const Index = () => {
               </div>
               <Button
                 onClick={exportAllData}
-                variant="outline"
-                size="sm"
+                className="border border-slate-300 bg-white text-slate-700 px-4 py-2 rounded hover:bg-slate-50 disabled:opacity-50"
                 disabled={personnel.length === 0}
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -201,7 +231,7 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
             <TabsTrigger value="dashboard" className="flex items-center space-x-2">
               <BarChart3 className="w-4 h-4" />
               <span>Dashboard</span>
@@ -213,6 +243,10 @@ const Index = () => {
             <TabsTrigger value="card-preview" className="flex items-center space-x-2">
               <Shield className="w-4 h-4" />
               <span>Access Card</span>
+            </TabsTrigger>
+            <TabsTrigger value="access-logs" className="flex items-center space-x-2">
+              <Clock className="w-4 h-4" />
+              <span>Access Logs</span>
             </TabsTrigger>
           </TabsList>
 
@@ -234,9 +268,7 @@ const Index = () => {
                           setEditingPerson(null);
                           setShowForm(!showForm);
                         }}
-                        variant="secondary"
-                        size="sm"
-                        className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        className="bg-white/20 hover:bg-white/30 text-white border-white/30 px-4 py-2 rounded"
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Personnel
@@ -318,6 +350,54 @@ const Index = () => {
                     <Button onClick={() => setActiveTab('personnel')}>
                       Go to Personnel
                     </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="access-logs">
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-t-lg">
+                <CardTitle className="text-lg font-semibold">Access Logs</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {logsLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+                    <p className="text-gray-600">Loading access logs...</p>
+                  </div>
+                ) : logsError ? (
+                  <div className="text-center py-8 text-red-600">{logsError}</div>
+                ) : accessLogs.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">No access logs found.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm border">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="px-4 py-2 border">Personnel</th>
+                          <th className="px-4 py-2 border">Time</th>
+                          <th className="px-4 py-2 border">Location</th>
+                          <th className="px-4 py-2 border">Granted</th>
+                          <th className="px-4 py-2 border">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accessLogs.map(log => {
+                          const person = personnel.find(p => p.id === log.personnel_id);
+                          return (
+                            <tr key={log.id} className="border-b">
+                              <td className="px-4 py-2 border">{person ? person.name : log.personnel_id}</td>
+                              <td className="px-4 py-2 border">{new Date(log.access_time).toLocaleString()}</td>
+                              <td className="px-4 py-2 border">{log.location || '-'}</td>
+                              <td className="px-4 py-2 border">{log.access_granted ? 'Yes' : 'No'}</td>
+                              <td className="px-4 py-2 border">{log.notes || '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>

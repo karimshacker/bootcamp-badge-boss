@@ -1,29 +1,22 @@
-
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Personnel } from '@/types/personnel';
+import { generateBarcodeValue, generateBarcodeDataUrl } from './idGenerator';
 
 export const generatePDF = async (element: HTMLElement, person: Personnel): Promise<void> => {
   try {
-    console.log('Starting PDF generation for:', person.name);
-    
     // Ensure element is visible and properly sized
     const originalPosition = element.style.position;
     const originalLeft = element.style.left;
     const originalTop = element.style.top;
     const originalTransform = element.style.transform;
-    
-    // Temporarily position element for capture
     element.style.position = 'fixed';
     element.style.left = '0';
     element.style.top = '0';
     element.style.transform = 'none';
     element.style.zIndex = '9999';
-
-    // Wait for any images to load
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Create high-quality canvas
+    // Render the entire card as a canvas
     const canvas = await html2canvas(element, {
       scale: 3,
       useCORS: true,
@@ -38,35 +31,22 @@ export const generatePDF = async (element: HTMLElement, person: Personnel): Prom
       windowWidth: 1200,
       windowHeight: 800,
     });
-
-    // Restore original element positioning
     element.style.position = originalPosition;
     element.style.left = originalLeft;
     element.style.top = originalTop;
     element.style.transform = originalTransform;
     element.style.zIndex = '';
-
-    console.log('Canvas created with dimensions:', canvas.width, 'x', canvas.height);
-
-    // Calculate PDF dimensions (credit card size: 85.6mm × 53.98mm)
+    // PDF dimensions (credit card size)
     const cardWidth = 85.6;
     const cardHeight = 53.98;
-    
-    // Create PDF with high DPI
     const pdf = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
       format: [cardWidth, cardHeight],
       compress: true,
     });
-
-    // Convert canvas to image
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    
-    // Add the image to PDF
     pdf.addImage(imgData, 'JPEG', 0, 0, cardWidth, cardHeight, undefined, 'FAST');
-
-    // Add metadata
     pdf.setProperties({
       title: `Access Card - ${person.name}`,
       subject: 'TechBootcamp Professional Access Card',
@@ -74,17 +54,10 @@ export const generatePDF = async (element: HTMLElement, person: Personnel): Prom
       creator: 'TechBootcamp Personnel Management',
       keywords: 'access card, personnel, identification, security',
     });
-
-    // Generate filename with clean formatting
     const cleanName = person.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `techbootcamp-access-card-${cleanName}-${timestamp}.pdf`;
-    
-    // Save the PDF
     pdf.save(filename);
-    
-    console.log(`PDF generated successfully: ${filename}`);
-    
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -185,4 +158,113 @@ export const generateBulkPDF = async (personnel: Personnel[]): Promise<void> => 
     console.error('Error generating bulk PDF:', error);
     throw new Error(`Failed to generate bulk PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+};
+
+export const generateIDCardPDF = async (person: Personnel): Promise<void> => {
+  const cardWidth = 85.6;
+  const cardHeight = 53.98;
+  const margin = 5;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [cardWidth, cardHeight] });
+
+  // Header: blue gradient (simulate with solid blue)
+  doc.setFillColor('#2563eb'); // Tailwind blue-600
+  doc.rect(0, 0, cardWidth, 13, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TECHBOOTCAMP', cardWidth / 2, 8, { align: 'center' });
+  doc.setFontSize(8);
+  doc.text('ID CARD', cardWidth / 2, 12, { align: 'center' });
+
+  // Card body background
+  doc.setFillColor('#f8fafc'); // Tailwind slate-50
+  doc.rect(0, 13, cardWidth, cardHeight - 13, 'F');
+
+  // Photo
+  const photoX = margin + 2;
+  const photoY = 17;
+  const photoW = 18;
+  const photoH = 22;
+  if (person.photo) {
+    const img = new window.Image();
+    img.src = person.photo;
+    await new Promise(resolve => { img.onload = resolve; });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
+      imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = avg;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    const grayPhoto = canvas.toDataURL('image/jpeg', 0.92);
+    doc.addImage(grayPhoto, 'JPEG', photoX, photoY, photoW, photoH);
+  } else {
+    doc.setFillColor('#e0e0e0');
+    doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'F');
+    doc.setFontSize(18);
+    doc.setTextColor(150);
+    doc.text(
+      person.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+      photoX + photoW / 2,
+      photoY + photoH / 2 + 5,
+      { align: 'center' }
+    );
+  }
+
+  // Info (right column)
+  const infoX = photoX + photoW + 6;
+  let infoY = photoY + 2;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12.5);
+  doc.setTextColor(30, 30, 30);
+  doc.text(person.name, infoX, infoY);
+  infoY += 7;
+  // Role badge
+  doc.setFillColor('#2563eb');
+  doc.roundedRect(infoX, infoY - 5, 22, 7, 2, 2, 'F');
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text(person.role.toUpperCase(), infoX + 11, infoY, { align: 'center' });
+  infoY += 8;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Dept: ${person.department}`, infoX, infoY);
+  infoY += 5;
+  doc.text(`ID: ${person.id}`, infoX, infoY);
+  infoY += 5;
+  doc.text(`Email: ${person.email}`, infoX, infoY);
+  infoY += 5;
+  if (person.phone) {
+    doc.text(`Phone: ${person.phone}`, infoX, infoY);
+    infoY += 5;
+  }
+  doc.text(`Status: ${person.status}`, infoX, infoY);
+  infoY += 5;
+  doc.text(`Expires: ${new Date(person.expiryDate).toLocaleDateString()}`, infoX, infoY);
+
+  // Barcode (smaller, bottom right)
+  const barcodeValue = generateBarcodeValue(person.id);
+  const barcodeUrl = generateBarcodeDataUrl(barcodeValue, { width: 1.2, height: 18 });
+  const barcodeImg = new window.Image();
+  barcodeImg.src = barcodeUrl;
+  await new Promise(resolve => { barcodeImg.onload = resolve; });
+  const barcodeW = 28;
+  const barcodeH = 7;
+  const barcodeX = cardWidth - margin - barcodeW;
+  const barcodeY = cardHeight - margin - barcodeH - 2;
+  doc.addImage(barcodeImg, 'PNG', barcodeX, barcodeY, barcodeW, barcodeH);
+  doc.setFontSize(7);
+  doc.setTextColor(100);
+  doc.text(barcodeValue, barcodeX + barcodeW / 2, barcodeY + barcodeH + 3, { align: 'center' });
+
+  // Save
+  const cleanName = person.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `techbootcamp-idcard-${cleanName}-${timestamp}.pdf`;
+  doc.save(filename);
 };
