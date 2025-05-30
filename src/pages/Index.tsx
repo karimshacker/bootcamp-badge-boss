@@ -1,23 +1,60 @@
 
-import React, { useState, useMemo } from 'react';
-import { Plus, Users, Download, Shield, BarChart3, Settings } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Plus, Users, Download, Shield, BarChart3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Personnel, PersonnelFilters } from '@/types/personnel';
+import { useToast } from '@/hooks/use-toast';
 import PersonnelList from '@/components/PersonnelList';
 import EnhancedPersonnelForm from '@/components/EnhancedPersonnelForm';
-import EnhancedAccessCardPreview from '@/components/EnhancedAccessCardPreview';
+import ProfessionalAccessCard from '@/components/ProfessionalAccessCard';
 import Dashboard from '@/components/Dashboard';
 import PersonnelFiltersComponent from '@/components/PersonnelFilters';
+import { personnelService } from '@/services/personnelService';
 
 const Index = () => {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Personnel | null>(null);
   const [editingPerson, setEditingPerson] = useState<Personnel | null>(null);
   const [filters, setFilters] = useState<PersonnelFilters>({});
   const [activeTab, setActiveTab] = useState('personnel');
+  const [departments, setDepartments] = useState<string[]>([]);
+  const { toast } = useToast();
+
+  // Load initial data
+  useEffect(() => {
+    loadPersonnel();
+    loadDepartments();
+  }, []);
+
+  const loadPersonnel = async () => {
+    try {
+      setLoading(true);
+      const data = await personnelService.getAllPersonnel();
+      setPersonnel(data);
+    } catch (error) {
+      console.error('Failed to load personnel:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load personnel data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const deps = await personnelService.getDepartments();
+      setDepartments(deps);
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+    }
+  };
 
   // Filter personnel based on current filters
   const filteredPersonnel = useMemo(() => {
@@ -35,28 +72,62 @@ const Index = () => {
     });
   }, [personnel, filters]);
 
-  // Get unique departments for filter dropdown
-  const departments = useMemo(() => {
-    return Array.from(new Set(personnel.map(p => p.department))).filter(Boolean);
-  }, [personnel]);
+  // Get unique departments for filter dropdown (including database departments)
+  const allDepartments = useMemo(() => {
+    const personnelDepartments = Array.from(new Set(personnel.map(p => p.department))).filter(Boolean);
+    return Array.from(new Set([...departments, ...personnelDepartments]));
+  }, [personnel, departments]);
 
-  const addPersonnel = (person: Personnel) => {
-    if (editingPerson) {
-      setPersonnel(prev => prev.map(p => p.id === person.id ? person : p));
-      setEditingPerson(null);
-      if (selectedPerson?.id === person.id) {
-        setSelectedPerson(person);
+  const addPersonnel = async (person: Personnel) => {
+    try {
+      if (editingPerson) {
+        const updatedPerson = await personnelService.updatePersonnel(person.id, person);
+        setPersonnel(prev => prev.map(p => p.id === person.id ? updatedPerson : p));
+        setEditingPerson(null);
+        if (selectedPerson?.id === person.id) {
+          setSelectedPerson(updatedPerson);
+        }
+        toast({
+          title: 'Success',
+          description: 'Personnel updated successfully',
+        });
+      } else {
+        const newPerson = await personnelService.createPersonnel(person);
+        setPersonnel(prev => [...prev, newPerson]);
+        toast({
+          title: 'Success',
+          description: 'Personnel added successfully',
+        });
       }
-    } else {
-      setPersonnel(prev => [...prev, person]);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Failed to save personnel:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save personnel',
+        variant: 'destructive',
+      });
     }
-    setShowForm(false);
   };
 
-  const removePersonnel = (id: string) => {
-    setPersonnel(prev => prev.filter(p => p.id !== id));
-    if (selectedPerson?.id === id) {
-      setSelectedPerson(null);
+  const removePersonnel = async (id: string) => {
+    try {
+      await personnelService.deletePersonnel(id);
+      setPersonnel(prev => prev.filter(p => p.id !== id));
+      if (selectedPerson?.id === id) {
+        setSelectedPerson(null);
+      }
+      toast({
+        title: 'Success',
+        description: 'Personnel removed successfully',
+      });
+    } catch (error) {
+      console.error('Failed to delete personnel:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete personnel',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -80,6 +151,17 @@ const Index = () => {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading personnel data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -165,7 +247,7 @@ const Index = () => {
                     <PersonnelFiltersComponent
                       filters={filters}
                       onFiltersChange={setFilters}
-                      departments={departments}
+                      departments={allDepartments}
                     />
                     
                     <PersonnelList 
@@ -223,11 +305,11 @@ const Index = () => {
           <TabsContent value="card-preview">
             <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-t-lg">
-                <CardTitle className="text-lg font-semibold">Access Card Preview</CardTitle>
+                <CardTitle className="text-lg font-semibold">Professional Access Card</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 {selectedPerson ? (
-                  <EnhancedAccessCardPreview person={selectedPerson} />
+                  <ProfessionalAccessCard person={selectedPerson} />
                 ) : (
                   <div className="text-center py-12">
                     <Shield className="w-16 h-16 text-slate-300 mx-auto mb-4" />

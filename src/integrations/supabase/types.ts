@@ -9,7 +9,119 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      access_logs: {
+        Row: {
+          access_granted: boolean
+          access_time: string
+          id: string
+          location: string | null
+          notes: string | null
+          personnel_id: string | null
+        }
+        Insert: {
+          access_granted?: boolean
+          access_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          personnel_id?: string | null
+        }
+        Update: {
+          access_granted?: boolean
+          access_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          personnel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_logs_personnel_id_fkey"
+            columns: ["personnel_id"]
+            isOneToOne: false
+            referencedRelation: "personnel"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      personnel: {
+        Row: {
+          access_level: string
+          created_at: string
+          department: string
+          email: string
+          emergency_contact: string | null
+          expiry_date: string
+          id: string
+          issue_date: string
+          last_access: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          photo: string | null
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_level: string
+          created_at?: string
+          department: string
+          email: string
+          emergency_contact?: string | null
+          expiry_date: string
+          id?: string
+          issue_date?: string
+          last_access?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          photo?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          department?: string
+          email?: string
+          emergency_contact?: string | null
+          expiry_date?: string
+          id?: string
+          issue_date?: string
+          last_access?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          photo?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
